@@ -67,6 +67,7 @@ private:
     void goToPrevHighlight();
     void goToNextHighlight();
     void goToHighlightIndex(int index);
+    void updateCursorPosition(int cursorPosition);
 
 signals:
     void searchStringChanged();

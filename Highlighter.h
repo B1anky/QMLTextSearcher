@@ -37,13 +37,15 @@ public:
     Highlighter(QTextDocument* parent = nullptr);
     void setWordPattern(const QString& word);
     void highlightBlock(const QString &text);
-    int setNextMatchStateActive();
-    int setPrevMatchStateActive();
+    void setNextMatchStateActive();
+    void setPrevMatchStateActive();
+    void setActiveMatchIndex(int activeMatchIndex);
     void customRehighlight();
 
     int totalMatches() const;
-    int setActiveMatchIndex(int activeMatchIndex);
     int activeMatchIndex() const;
+    int currentCursorMatch() const;
+    int currentLineMatch() const;
 
 private:
 
@@ -60,6 +62,8 @@ private:
     int m_currentMatchIndex = 0;
     int m_activeMatchIndex = 0;
     QTextBlock m_activeBlock;
+    int m_currentCursorMatch = -1;
+    int m_currentLineMatch = -1;
 };
 
 #endif // HIGHLIGHTER_H
