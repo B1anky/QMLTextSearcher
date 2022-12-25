@@ -22,6 +22,8 @@
 #include "highlighter.h"
 #include <QTextDocument>
 
+#include <QDebug>
+
 Highlighter::Highlighter(QTextDocument *parent)
     : QSyntaxHighlighter(parent)
 {
@@ -59,7 +61,8 @@ void Highlighter::highlightBlock(const QString& text)
                     format = m_activeHighlightingRule.format;
                     m_activeBlock = currentBlock();
                 }
-                setFormat(startOffset, endOffset - startOffset, format);
+                setFormat(startOffset, endOffset - startOffset, format);                
+
                 m_matchList.push_back(match);
                 ++m_currentMatchIndex;
             }
@@ -75,32 +78,37 @@ void Highlighter::customRehighlight(){
     rehighlight();
 }
 
-int Highlighter::setNextMatchStateActive(){
-    return setActiveMatchIndex(m_activeMatchIndex + 1);
+void Highlighter::setNextMatchStateActive(){
+    setActiveMatchIndex(m_activeMatchIndex + 1);
 }
 
-int Highlighter::setPrevMatchStateActive(){
-    return setActiveMatchIndex(m_activeMatchIndex - 1);
+void Highlighter::setPrevMatchStateActive(){
+    setActiveMatchIndex(m_activeMatchIndex - 1);
 }
 
-int Highlighter::setActiveMatchIndex(int activeMatchIndex){
-    int startIndex = -1;
+void Highlighter::setActiveMatchIndex(int activeMatchIndex){
     if(m_activeMatchIndex != activeMatchIndex){
         if(activeMatchIndex >= 0 && activeMatchIndex < m_matchList.size()){
             m_activeMatchIndex = activeMatchIndex;
             customRehighlight();
-            startIndex = m_matchList[m_activeMatchIndex].capturedEnd() + m_activeBlock.position();
         }else if(activeMatchIndex >= m_matchList.size() && m_matchList.size() > 0){
             m_activeMatchIndex = 0;
             customRehighlight();
-            startIndex = m_matchList[m_activeMatchIndex].capturedEnd() + m_activeBlock.position();
         }else if(activeMatchIndex <= -1 && m_matchList.size() > 0){
             m_activeMatchIndex = m_matchList.size() - 1;
             customRehighlight();
-            startIndex = m_matchList[m_activeMatchIndex].capturedEnd() + m_activeBlock.position();
         }
     }
-    return startIndex;
+
+    qDebug() << m_findString;
+
+    if(m_activeMatchIndex >= 0 && m_activeMatchIndex < m_matchList.size() && !m_findString.isEmpty()){
+        m_currentCursorMatch = m_matchList[m_activeMatchIndex].capturedEnd() + m_activeBlock.position();
+        m_currentLineMatch = this->document()->toPlainText().midRef(0, m_currentCursorMatch + m_findString.length()).count('\n');
+    }else{
+        m_currentCursorMatch = -1;
+        m_currentLineMatch = -1;
+    }
 }
 
 int Highlighter::totalMatches() const{
@@ -109,4 +117,12 @@ int Highlighter::totalMatches() const{
 
 int Highlighter::activeMatchIndex() const{
     return m_activeMatchIndex;
+}
+
+int Highlighter::currentCursorMatch() const{
+    return m_currentCursorMatch;
+}
+
+int Highlighter::currentLineMatch() const{
+    return m_currentLineMatch;
 }

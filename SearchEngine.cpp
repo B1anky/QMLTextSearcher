@@ -29,11 +29,11 @@ SearchEngine::SearchEngine(QObject *parent) : QObject(parent)
 {
     connect(this, &SearchEngine::searchStringChanged, this, [this](){
         m_syntaxHighlighter.setWordPattern(m_searchString);
-        TextEditRefreshHighlighter();
+        highlightText();
     }, Qt::DirectConnection);
 
     connect(this, &SearchEngine::contentStringChanged, this, [this](){
-        TextEditRefreshHighlighter();
+        highlightText();
     }, Qt::DirectConnection);
 
     connect(this, SearchEngine::onPrevHighlightChanged, this, [this](){
@@ -101,7 +101,6 @@ void SearchEngine::setHighlightIndex(int highlightIndex){
     if(m_highlightIndex != highlightIndex){
         m_highlightIndex = highlightIndex;
         emit onHighlightIndexChanged();
-        goToHighlightIndex(m_highlightIndex);
     }
 }
 
@@ -118,53 +117,47 @@ void SearchEngine::setSize(int size){
 
 void SearchEngine::highlightText()
 {
-    m_syntaxHighlighter.customRehighlight();
+    if(!m_textDocument) return;
 
+    m_syntaxHighlighter.customRehighlight();
     setSize(m_syntaxHighlighter.totalMatches());
+
     if(m_syntaxHighlighter.activeMatchIndex() < m_size){
         if(m_size > 0){
             m_syntaxHighlighter.setActiveMatchIndex(m_syntaxHighlighter.activeMatchIndex());
         }else{
             m_syntaxHighlighter.setActiveMatchIndex(0);
         }
-
-        setHighlightIndex(m_syntaxHighlighter.activeMatchIndex() + 1);
     }else{
         m_syntaxHighlighter.setActiveMatchIndex(std::max(m_size - 1, 0));
-        setHighlightIndex(m_size);
     }
+
+    jumpToLine(m_syntaxHighlighter.currentLineMatch());
 }
 
-void SearchEngine::TextEditRefreshHighlighter(){
-    if(!m_textDocument) return;
-
-    highlightText();
+void SearchEngine::jumpToLine(int line){
+    setLinePosition(line);
+    if(line >= 0){
+        setHighlightIndex(m_syntaxHighlighter.activeMatchIndex() + 1);
+    }
 }
 
 void SearchEngine::goToNextHighlight()
 {
-    int cursorPosition = m_syntaxHighlighter.setNextMatchStateActive();
-    TextEditRefreshHighlighter();
-    if(cursorPosition > 0){
-        setCursorPosition(cursorPosition);
-    }
+    m_syntaxHighlighter.setNextMatchStateActive();
+    jumpToLine(m_syntaxHighlighter.currentLineMatch());
 }
 
 void SearchEngine::goToPrevHighlight()
 {
-    int cursorPosition = m_syntaxHighlighter.setPrevMatchStateActive();
-    TextEditRefreshHighlighter();
-    if(cursorPosition > 0){
-        setCursorPosition(cursorPosition);
-    }
+    m_syntaxHighlighter.setPrevMatchStateActive();
+    jumpToLine(m_syntaxHighlighter.currentLineMatch());
 }
 
 void SearchEngine::goToHighlightIndex(int index)
 {
-    int cursorPosition = m_syntaxHighlighter.setActiveMatchIndex(index - 1);
-    if(cursorPosition > 0){
-        setCursorPosition(cursorPosition);
-    }
+    m_syntaxHighlighter.setActiveMatchIndex(index - 1);
+    jumpToLine(m_syntaxHighlighter.currentLineMatch());
 }
 
 int SearchEngine::cursorPosition() const{
@@ -176,4 +169,16 @@ void SearchEngine::setCursorPosition(int cursorPosition){
         m_cursorPosition = cursorPosition;
         emit onCursorPositionChanged();
     }
+}
+
+int SearchEngine::linePosition() const{
+    return m_linePosition;
+}
+
+void SearchEngine::setLinePosition(int linePosition){
+    if(m_linePosition != linePosition){
+        m_linePosition = linePosition;
+    }
+    // The user could've scrolled away while a second match was on the same line.
+    emit onLinePositionChanged();
 }

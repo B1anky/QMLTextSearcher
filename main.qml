@@ -23,7 +23,10 @@ import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.5
+import QtQuick.Controls.Material 2.3
+
 import SearchEngine 1.0
+
 
 Window {
     id: window
@@ -32,6 +35,18 @@ Window {
     height: 480
     visible: true
     title: qsTr("QML Text Search")
+    property bool showSearchBar: false
+    property string searchStringOnHide: ""
+    property bool darkMode: false
+    Material.theme: darkMode ? Material.Dark : Material.Light
+    Material.accent: darkMode ? "Orange" : "Teal"
+    Material.primary: darkMode ? "White" : "BlueGrey"
+    color: window.Material.background
+
+    function refreshContentAreaHack(){
+        //contentTextArea.width = contentTextArea.width + 1
+        //contentTextArea.width = contentTextArea.width - 1
+    }
 
     SearchEngine {
         id: searchEngine
@@ -39,9 +54,22 @@ Window {
         textDocumentObj: contentTextArea.textDocument
 
         onHighlightIndexChanged: {
-            contentTextArea.width = contentTextArea.width + 1
-            contentTextArea.width = contentTextArea.width - 1
+            console.log("onHighlightIndexChanged searchEngine.linePosition:", searchEngine.linePosition)
+            refreshContentAreaHack()
             indexTextInput.text = parseInt(searchEngine.highlightIndex)
+        }
+
+        onCursorPositionChanged: {
+            //console.log("onCursorPositionChanged searchEngine.cursorPosition:", searchEngine.cursorPosition)
+            //contentTextArea.cursorPosition = searchEngine.cursorPosition
+            //console.log("onCursorPositionChanged contentTextArea.cursorPosition:", contentTextArea.cursorPosition)
+            //refreshContentAreaHack()
+        }
+
+        onLinePositionChanged: {
+            console.log("line:", searchEngine.linePosition)
+            scrollView.ensureVisible(searchEngine.linePosition)
+            refreshContentAreaHack()
         }
     }
 
@@ -54,150 +82,261 @@ Window {
         anchors.bottomMargin: 10
 
         RowLayout {
-            Layout.preferredHeight: 20
+            Layout.preferredHeight: 30
             Layout.fillWidth: true
 
-            Rectangle {
-                id: rect1
-                border.color: "black"
-                border.width: 1
+            Switch{
+                id: darkModeSwitch
+                Layout.alignment: Qt.AlignBottom
+                bottomPadding: 0
+                text: window.darkMode ? "Light Mode" : "Dark Mode"
+                onToggled: {
+                    window.darkMode = !window.darkMode
+                }
+            }
+
+            Item{
+                id: searchBar
                 Layout.fillWidth: true
                 Layout.preferredHeight: 20
-                Layout.alignment: Qt.AlignTop
+                visible: showSearchBar
 
-                TextInput {
-                    id: searchTextInput
+                RowLayout {
                     anchors.fill: parent
-                    text: ""
-                    leftPadding: 10
-                    rightPadding: 10
-                    verticalAlignment: TextEdit.AlignVCenter
-                    selectByMouse: true
-                    property string placeholderText: "Search for..."
 
-                    Text {
-                        anchors.fill: parent
-                        text: searchTextInput.placeholderText
-                        color: "#aaa"
-                        visible: !searchTextInput.text
-                                 && !searchTextInput.activeFocus
-                        leftPadding: 10
-                        rightPadding: 10
+                    Rectangle {
+                        id: searchBarRect
+                        color: window.Material.background
+                        border.color: window.Material.foreground
+                        border.width: 1
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 30
+                        radius: 2
+
+                        TextInput {
+                            id: searchTextInput
+                            anchors.fill: parent
+                            color: window.Material.foreground
+                            text: ""
+                            focus: true
+                            leftPadding: 10
+                            rightPadding: 10
+                            verticalAlignment: TextEdit.AlignVCenter
+                            selectByMouse: true
+                            property string placeholderText: "Search for..."
+
+                            Text {
+                                anchors.fill: parent
+                                text: searchTextInput.placeholderText
+                                color: window.Material.foreground
+                                visible: !searchTextInput.text
+                                         && !searchTextInput.activeFocus
+                                leftPadding: 10
+                                rightPadding: 10
+                                verticalAlignment: TextEdit.AlignVCenter
+                            }
+
+                            onTextEdited: {
+                                searchEngine.searchString = text
+                            }
+                        }
+                    }
+
+                    ToolSeparator{
+                        Layout.preferredHeight: searchBarRect.height
+                        topPadding: 0
+                        bottomPadding: 0
+                    }
+
+                    TextInput {
+                        id: indexTextInput
+                        text: "0"
+                        Layout.preferredHeight: searchBarRect.height
+                        Layout.alignment: TextEdit.AlignTop
                         verticalAlignment: TextEdit.AlignVCenter
+                        topPadding: 0
+                        bottomPadding: 0
+                        leftPadding: 0
+                        rightPadding: 0
+                        font: sizeLabel.font
+                        color: window.Material.foreground
+
+                        validator: IntValidator {
+                                            bottom: searchEngine.size > 0 ? 1 : 0
+                                            top: searchEngine.size
+                                        }
+
+                        onFocusChanged: {
+                            if (focus) {
+                                selectAll()
+                            }
+                        }
+
+                        onTextEdited: {
+                            if (acceptableInput) {
+                                searchEngine.highlightIndex = parseInt(text)
+                            } else {
+                                indexTextInput.text = parseInt(
+                                            searchEngine.highlightIndex)
+                                selectAll()
+                            }
+                        }
+
+                        Keys.onUpPressed: {
+                            backButton.highlightPrev()
+                        }
+
+                        Keys.onDownPressed: {
+                            forwardButton.highlightNext()
+                        }
                     }
 
-                    onTextChanged: {
-                        searchEngine.searchString = text
-                        contentTextArea.width = contentTextArea.width + 1
-                        contentTextArea.width = contentTextArea.width - 1
+                    Label {
+                       id: sizeLabel
+                       text: "/ " + parseInt(searchEngine.size)
+                       rightPadding: 10
+                       Layout.preferredHeight: searchBarRect.height
+                       verticalAlignment: TextEdit.AlignVCenter
+                   }
+
+                    Button {
+                        id: backButton
+                        text: "▲"
+                        Layout.preferredHeight: searchBarRect.height
+                        Layout.preferredWidth: 30
+                        Layout.alignment: TextEdit.AlignTop
+                        ToolTip.text: "Previous Match"
+                        ToolTip.visible: hovered
+
+                        function highlightPrev() {
+                            searchEngine.onPrevHighlightChanged()
+                            indexTextInput.text = parseInt(searchEngine.highlightIndex)
+                        }
+                        onPressed: {
+                            highlightPrev()
+                        }
                     }
-                }
-            }
 
-            TextInput {
-                id: indexTextInput
-                text: "0"
-                Layout.preferredHeight: rect1.height
-                Layout.alignment: TextEdit.AlignTop
-                verticalAlignment: TextEdit.AlignVCenter
-                selectedTextColor: Qt.rgba(1, 1, 1, 1)
+                    Button {
+                        id: forwardButton
+                        text: "▼"
+                        Layout.preferredHeight: searchBarRect.height
+                        Layout.preferredWidth: 30
+                        Layout.alignment: TextEdit.AlignTop
+                        ToolTip.text: "Next Match"
+                        ToolTip.visible: hovered
 
-                validator: IntValidator {
-                    bottom: searchEngine.size > 0 ? 1 : 0
-                    top: searchEngine.size
-                }
-
-                onFocusChanged: {
-                    if (focus) {
-                        selectAll()
+                        function highlightNext() {
+                            searchEngine.onNextHighlightChanged()
+                            indexTextInput.text = parseInt(searchEngine.highlightIndex)
+                        }
+                        onPressed: {
+                            highlightNext()
+                        }
                     }
-                }
 
-                onTextEdited: {
-                    if (acceptableInput) {
-                        searchEngine.highlightIndex = parseInt(text)
-                    } else {
-                        indexTextInput.text = parseInt(
-                                    searchEngine.highlightIndex)
-                        selectAll()
+                    Button {
+                        id: hideButton
+                        text: "X"
+                        Layout.preferredHeight: searchBarRect.height
+                        Layout.preferredWidth: 30
+                        Layout.alignment: TextEdit.AlignTop
+                        ToolTip.text: "Close search bar"
+                        ToolTip.visible: hovered
+
+                        onPressed: {
+                            window.showSearchBar = false
+                            window.searchStringOnHide = searchEngine.searchString
+                            searchEngine.searchString = ""
+                        }
                     }
-                }
-
-                Keys.onUpPressed: {
-                    backButton.highlightPrev()
-                }
-
-                Keys.onDownPressed: {
-                    forwardButton.highlightNext()
-                }
-            }
-
-            Label {
-                id: sizeLabel
-                text: "/ " + parseInt(searchEngine.size)
-                Layout.preferredHeight: rect1.height
-                Layout.alignment: TextEdit.AlignTop
-                verticalAlignment: TextEdit.AlignVCenter
-            }
-
-            RoundButton {
-                id: backButton
-                text: "▲"
-                Layout.preferredHeight: rect1.height
-                Layout.preferredWidth: 30
-                Layout.alignment: TextEdit.AlignTop
-                radius: 5
-                function highlightPrev() {
-                    searchEngine.onPrevHighlightChanged()
-                    contentTextArea.width = contentTextArea.width + 1
-                    contentTextArea.width = contentTextArea.width - 1
-                    indexTextInput.text = parseInt(searchEngine.highlightIndex)
-                }
-                onPressed: {
-                    highlightPrev()
-                }
-            }
-
-            RoundButton {
-                id: forwardButton
-                text: "▼"
-                Layout.preferredHeight: rect1.height
-                Layout.preferredWidth: 30
-                Layout.alignment: TextEdit.AlignTop
-                radius: 5
-                function highlightNext() {
-                    searchEngine.onNextHighlightChanged()
-                    contentTextArea.width = contentTextArea.width + 1
-                    contentTextArea.width = contentTextArea.width - 1
-                    indexTextInput.text = parseInt(searchEngine.highlightIndex)
-                }
-                onPressed: {
-                    highlightNext()
                 }
             }
         }
         Rectangle {
-            id: rect2
+            id: textAreaRect
             Layout.fillWidth: true
             Layout.fillHeight: true
-            border.color: "black"
+            color: window.Material.background
+            border.color: window.Material.foreground
             border.width: 1
-            ScrollView {
+            radius: 2
+
+            Flickable {
                 id: scrollView
                 anchors.fill: parent
-                TextArea {
+                focus: true
+                contentWidth: contentTextArea.width
+                contentHeight: contentTextArea.height
+
+                ScrollBar.vertical: ScrollBar {
+                    id: verticalScrollBar
+                    size: 0.3
+                    position: 0.2
+                    active: true
+                    orientation: Qt.Vertical
+                    visible: true
+
+                    contentItem: Rectangle {
+                        implicitWidth: 6
+                        implicitHeight: 100
+                        radius: width / 2
+                        color: verticalScrollBar.pressed ? Qt.darker(Material.accent) : Material.accent
+                    }
+                }
+
+                TextMetrics {
+                    id: t_metrics
+                    font: contentTextArea.font
+                }
+
+                function ensureVisible(line) {
+                    // This works if word wrap is off...
+                    var contentText = contentTextArea.text.split('\n')
+                    var wrappedLines = 0
+                    var wrappedLineHeight = 0
+                    for(var i = 0; i < contentTextArea.lineCount && i <= line; i++){
+                        t_metrics.text = contentText[i]
+                        // Get width of the text with the current font size and divide by current width to determine wrapped lines
+                        //wrappedLines += t_metrics.tightBoundingRect.width / contentTextArea.contentWidth
+                        wrappedLines = t_metrics.boundingRect.width / contentTextArea.contentWidth
+                        wrappedLineHeight += wrappedLines * t_metrics.height
+                    }
+                    console.log("wrappedLines:", wrappedLines)
+                    //var lineHeight = contentTextArea.contentHeight / contentTextArea.lineCount
+                    //var targetY = wrappedLines * lineHeight
+                    var targetY = wrappedLineHeight
+                    console.log("targetY:", targetY)
+                    console.log("scrollView.contentHeight:", scrollView.contentHeight)
+
+                    //scrollView.contentY = Math.max(0, Math.min(targetY, scrollView.height))
+                    scrollView.contentY = Math.max(0, Math.min(targetY, scrollView.contentHeight))
+                }
+
+                TextArea.flickable: TextArea {
                     id: contentTextArea
                     objectName: "contentTextArea"
+
                     text: ""
+                    leftPadding: 10
+                    rightPadding: scrollView.ScrollBar.vertical.visible ? scrollView.ScrollBar.vertical.width : 10
+                    bottomPadding: 5
                     wrapMode: TextEdit.Wrap
                     selectByMouse: true
                     selectByKeyboard: true
                     textFormat: TextEdit.PlainText
-                    focus: true
-                    cursorPosition: searchEngine.cursorPosition
 
                     onTextChanged: {
                         searchEngine.contentString = text
+                    }
+
+                    Shortcut {
+                        sequence: "Ctrl+F"
+                        onActivated: {
+                            window.showSearchBar = true
+                            searchEngine.searchString = window.searchStringOnHide
+                            searchTextInput.focus = true
+                        }
                     }
                 }
             }

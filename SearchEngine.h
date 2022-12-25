@@ -34,6 +34,7 @@ class SearchEngine : public QObject
     Q_PROPERTY(int highlightIndex READ highlightIndex WRITE setHighlightIndex NOTIFY onHighlightIndexChanged)
     Q_PROPERTY(int size READ size WRITE setSize NOTIFY onSizeChanged)
     Q_PROPERTY(int cursorPosition READ cursorPosition WRITE setCursorPosition NOTIFY onCursorPositionChanged)
+    Q_PROPERTY(int linePosition READ linePosition WRITE setLinePosition NOTIFY onLinePositionChanged)
     Q_PROPERTY(QObject* textDocumentObj READ textDocumentObj WRITE setTextDocument)
     Q_PROPERTY(QTextDocument* textDocument READ textDocument NOTIFY onTextDocumentChanged)
 
@@ -61,12 +62,16 @@ public:
     int cursorPosition() const;
     void setCursorPosition(int cursorPosition);
 
+    int linePosition() const;
+    void setLinePosition(int linePosition);
+
 private:
     void highlightText();
     void TextEditRefreshHighlighter();
     void goToPrevHighlight();
     void goToNextHighlight();
     void goToHighlightIndex(int index);
+    void jumpToLine(int cursorPosition);
 
 signals:
     void searchStringChanged();
@@ -76,6 +81,7 @@ signals:
     void onPrevHighlightChanged();
     void onNextHighlightChanged();
     void onCursorPositionChanged();
+    void onLinePositionChanged();
     void onTextDocumentChanged();
 
 private:
@@ -85,6 +91,7 @@ private:
     int m_highlightIndex = 0;
     int m_size = 0;
     int m_cursorPosition = 0;
+    int m_linePosition = 0;
 
     Highlighter m_syntaxHighlighter;
     QTextDocument* m_textDocument = nullptr;
