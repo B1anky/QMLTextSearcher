@@ -100,7 +100,7 @@ void Highlighter::setActiveMatchIndex(int activeMatchIndex){
 
     if(m_activeMatchIndex >= 0 && m_activeMatchIndex < m_matchList.size() && !m_findString.isEmpty()){
         m_currentCursorMatch = m_matchList[m_activeMatchIndex].capturedEnd() + m_activeBlock.position();
-        m_currentLineMatch = this->document()->toPlainText().midRef(0, m_currentCursorMatch + m_findString.length()).count('\n');
+        m_currentLineMatch = this->document()->toPlainText().mid(0, m_currentCursorMatch + m_findString.length()).count('\n');
     }else{
         m_currentCursorMatch = -1;
         m_currentLineMatch = -1;

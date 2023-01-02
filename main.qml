@@ -43,23 +43,16 @@ Window {
     Material.primary: darkMode ? "White" : "BlueGrey"
     color: window.Material.background
 
-    function refreshContentAreaHack(){
-        contentTextArea.width = contentTextArea.width + 1
-        contentTextArea.width = contentTextArea.width - 1
-    }
-
     SearchEngine {
         id: searchEngine
         objectName: "searchEngine"
         textDocumentObj: contentTextArea.textDocument
 
         onHighlightIndexChanged: {
-            refreshContentAreaHack()
             indexTextInput.text = parseInt(searchEngine.highlightIndex)
         }
 
         onCursorPositionChanged: {
-            refreshContentAreaHack()
             contentTextArea.cursorPosition = searchEngine.cursorPosition
         }
     }
@@ -201,7 +194,6 @@ Window {
 
                         function highlightPrev() {
                             searchEngine.onPrevHighlightChanged()
-                            refreshContentAreaHack()
                             indexTextInput.text = parseInt(searchEngine.highlightIndex)
                         }
                         onPressed: {

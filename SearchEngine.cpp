@@ -100,6 +100,7 @@ int SearchEngine::highlightIndex() const{
 void SearchEngine::setHighlightIndex(int highlightIndex){
     if(m_highlightIndex != highlightIndex){
         m_highlightIndex = highlightIndex;
+        goToHighlightIndex(highlightIndex);
         emit onHighlightIndexChanged();
     }
 }
