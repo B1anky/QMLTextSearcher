@@ -1,3 +1,5 @@
+
+
 /*
  * Copyright (c) 2022 Brett Sackstein
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -18,7 +20,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
 */
-
 import QtQuick 2.15
 import QtQuick.Window 2.15
 import QtQuick.Layouts 1.3
@@ -26,7 +27,6 @@ import QtQuick.Controls 2.5
 import QtQuick.Controls.Material 2.3
 
 import SearchEngine 1.0
-
 
 Window {
     id: window
@@ -69,7 +69,7 @@ Window {
             Layout.preferredHeight: 30
             Layout.fillWidth: true
 
-            Switch{
+            Switch {
                 id: darkModeSwitch
                 Layout.alignment: Qt.AlignBottom
                 bottomPadding: 0
@@ -79,7 +79,7 @@ Window {
                 }
             }
 
-            Item{
+            Item {
                 id: searchBar
                 Layout.fillWidth: true
                 Layout.preferredHeight: 20
@@ -123,10 +123,29 @@ Window {
                             onTextEdited: {
                                 searchEngine.searchString = text
                             }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: (containsMouse ? Qt.IBeamCursor : Qt.ArrowCursor)
+                                onClicked: function (mouse) {
+                                    parent.focus = true
+                                    mouse.accepted = false
+                                }
+                                onPressed: function (mouse) {
+                                    parent.focus = true
+                                    mouse.accepted = false
+                                }
+                                onDoubleClicked: function (mouse) {
+                                    parent.focus = true
+                                    parent.selectAll()
+                                    mouse.accepted = false
+                                }
+                            }
                         }
                     }
 
-                    ToolSeparator{
+                    ToolSeparator {
                         Layout.preferredHeight: searchBarRect.height
                         topPadding: 0
                         bottomPadding: 0
@@ -144,11 +163,22 @@ Window {
                         rightPadding: 0
                         font: sizeLabel.font
                         color: window.Material.foreground
+                        property bool cursorVisible
 
                         validator: IntValidator {
-                                            bottom: searchEngine.size > 0 ? 1 : 0
-                                            top: searchEngine.size
-                                        }
+                            bottom: searchEngine.size > 0 ? 1 : 0
+                            top: searchEngine.size
+                        }
+
+                        MouseArea {
+                            anchors.fill: indexTextInput
+                            hoverEnabled: true
+                            cursorShape: (containsMouse ? Qt.IBeamCursor : Qt.ArrowCursor)
+                            onClicked: function (mouse) {
+                                indexTextInput.focus = true
+                                mouse.accepted = false
+                            }
+                        }
 
                         onFocusChanged: {
                             if (focus) {
@@ -176,12 +206,12 @@ Window {
                     }
 
                     Label {
-                       id: sizeLabel
-                       text: "/ " + parseInt(searchEngine.size)
-                       rightPadding: 10
-                       Layout.preferredHeight: searchBarRect.height
-                       verticalAlignment: TextEdit.AlignVCenter
-                   }
+                        id: sizeLabel
+                        text: "/ " + parseInt(searchEngine.size)
+                        rightPadding: 10
+                        Layout.preferredHeight: searchBarRect.height
+                        verticalAlignment: TextEdit.AlignVCenter
+                    }
 
                     Button {
                         id: backButton
@@ -194,7 +224,8 @@ Window {
 
                         function highlightPrev() {
                             searchEngine.onPrevHighlightChanged()
-                            indexTextInput.text = parseInt(searchEngine.highlightIndex)
+                            indexTextInput.text = parseInt(
+                                        searchEngine.highlightIndex)
                         }
                         onPressed: {
                             highlightPrev()
@@ -212,7 +243,8 @@ Window {
 
                         function highlightNext() {
                             searchEngine.onNextHighlightChanged()
-                            indexTextInput.text = parseInt(searchEngine.highlightIndex)
+                            indexTextInput.text = parseInt(
+                                        searchEngine.highlightIndex)
                         }
                         onPressed: {
                             highlightNext()
@@ -262,7 +294,8 @@ Window {
                         implicitWidth: 6
                         implicitHeight: 100
                         radius: width / 2
-                        color: verticalScrollBar.pressed ? Qt.darker(Material.accent) : Material.accent
+                        color: verticalScrollBar.pressed ? Qt.darker(
+                                                               Material.accent) : Material.accent
                     }
                 }
 
